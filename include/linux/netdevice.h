@@ -1881,9 +1881,7 @@ struct net_device {
 #endif
 	const struct net_device_ops *netdev_ops;
 	const struct ethtool_ops *ethtool_ops;
-#ifdef CONFIG_NET_L3_MASTER_DEV
-	const struct l3mdev_ops	*l3mdev_ops;
-#endif
+	/* NET_L3_MASTER_DEV l3mdev_ops moved to KABI reserve below */
 #if IS_ENABLED(CONFIG_IPV6)
 	const struct ndisc_ops *ndisc_ops;
 #endif
@@ -2110,7 +2108,11 @@ struct net_device {
 	const struct macsec_ops *macsec_ops;
 #endif
 
+#ifdef CONFIG_NET_L3_MASTER_DEV
+	ANDROID_KABI_USE(1, const struct l3mdev_ops *l3mdev_ops);
+#else
 	ANDROID_KABI_RESERVE(1);
+#endif
 	ANDROID_KABI_RESERVE(2);
 	ANDROID_KABI_RESERVE(3);
 	ANDROID_KABI_RESERVE(4);

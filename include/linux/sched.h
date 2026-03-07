@@ -504,14 +504,8 @@ struct sched_entity {
 
 	struct sched_statistics		statistics;
 
-#ifdef CONFIG_FAIR_GROUP_SCHED
-	int				depth;
-	struct sched_entity		*parent;
-	/* rq on which this entity is (to be) queued: */
-	struct cfs_rq			*cfs_rq;
-	/* rq "owned" by this entity/group: */
-	struct cfs_rq			*my_q;
-#endif
+	/* FAIR_GROUP_SCHED fields moved to KABI reserves below
+	 * to preserve struct layout for vendor modules. */
 
 #ifdef CONFIG_SMP
 	/*
@@ -523,10 +517,17 @@ struct sched_entity {
 	struct sched_avg		avg;
 #endif
 
+#ifdef CONFIG_FAIR_GROUP_SCHED
+	ANDROID_KABI_USE2(1, int depth, int __depth_pad);
+	ANDROID_KABI_USE(2, struct sched_entity *parent);
+	ANDROID_KABI_USE(3, struct cfs_rq *cfs_rq);
+	ANDROID_KABI_USE(4, struct cfs_rq *my_q);
+#else
 	ANDROID_KABI_RESERVE(1);
 	ANDROID_KABI_RESERVE(2);
 	ANDROID_KABI_RESERVE(3);
 	ANDROID_KABI_RESERVE(4);
+#endif
 };
 
 struct cpu_cycle_counter_cb {

@@ -4164,14 +4164,15 @@ static inline void skb_set_nfct(struct sk_buff *skb, unsigned long nfct)
 
 #ifdef CONFIG_SKB_EXTENSIONS
 enum skb_ext_id {
-#if IS_ENABLED(CONFIG_BRIDGE_NETFILTER)
-	SKB_EXT_BRIDGE_NF,
-#endif
 #ifdef CONFIG_XFRM
 	SKB_EXT_SEC_PATH,
 #endif
 #if IS_ENABLED(CONFIG_NET_TC_SKB_EXT)
 	TC_SKB_EXT,
+#endif
+	/* BRIDGE_NF moved after existing entries to preserve enum values */
+#if IS_ENABLED(CONFIG_BRIDGE_NETFILTER)
+	SKB_EXT_BRIDGE_NF,
 #endif
 	SKB_EXT_NUM, /* must be last */
 };

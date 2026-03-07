@@ -138,9 +138,7 @@ struct net {
 #if defined(CONFIG_NF_CONNTRACK) || defined(CONFIG_NF_CONNTRACK_MODULE)
 	struct netns_ct		ct;
 #endif
-#if defined(CONFIG_NF_TABLES) || defined(CONFIG_NF_TABLES_MODULE)
-	struct netns_nftables	nft;
-#endif
+	/* NF_TABLES nft moved to end of struct for layout compat */
 #if IS_ENABLED(CONFIG_NF_DEFRAG_IPV6)
 	struct netns_nf_frag	nf_frag;
 	struct ctl_table_header *nf_frag_frags_hdr;
@@ -165,9 +163,7 @@ struct net {
 #ifdef CONFIG_XFRM
 	struct netns_xfrm	xfrm;
 #endif
-#if IS_ENABLED(CONFIG_IP_VS)
-	struct netns_ipvs	*ipvs;
-#endif
+	/* IP_VS ipvs moved to end of struct for layout compat */
 #if IS_ENABLED(CONFIG_MPLS)
 	struct netns_mpls	mpls;
 #endif
@@ -181,6 +177,14 @@ struct net {
 	struct sock		*crypto_nlsk;
 #endif
 	struct sock		*diag_nlsk;
+
+	/* Fields moved to end of struct to preserve layout for vendor modules */
+#if defined(CONFIG_NF_TABLES) || defined(CONFIG_NF_TABLES_MODULE)
+	struct netns_nftables	nft;
+#endif
+#if IS_ENABLED(CONFIG_IP_VS)
+	struct netns_ipvs	*ipvs;
+#endif
 } __randomize_layout;
 
 #include <linux/seq_file_net.h>

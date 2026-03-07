@@ -567,10 +567,7 @@ struct request_queue {
 	struct bsg_class_device bsg_dev;
 #endif
 
-#ifdef CONFIG_BLK_DEV_THROTTLING
-	/* Throttle data */
-	struct throtl_data *td;
-#endif
+	/* BLK_DEV_THROTTLING td moved to end of struct for layout compat */
 	struct rcu_head		rcu_head;
 	wait_queue_head_t	mq_freeze_wq;
 	/*
@@ -598,6 +595,11 @@ struct request_queue {
 
 #define BLK_MAX_WRITE_HINTS	5
 	u64			write_hints[BLK_MAX_WRITE_HINTS];
+
+#ifdef CONFIG_BLK_DEV_THROTTLING
+	/* Moved to end for layout compat */
+	struct throtl_data *td;
+#endif
 };
 
 /* Keep blk_queue_flag_name[] in sync with the definitions below */
