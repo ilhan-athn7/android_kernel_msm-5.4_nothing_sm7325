@@ -1,0 +1,36 @@
+name: Build Spacewar Kernel
+
+on:
+  workflow_dispatch:
+
+jobs:
+  start_building:
+    runs-on: ubuntu-24.04
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: true
+
+    - name: Prepare environment
+      run: |
+        sudo sed -i 's/^Types: deb$/Types: deb deb-src/' /etc/apt/sources.list.d/ubuntu.sources
+        sudo apt update
+        sudo apt build-dep linux -y
+        sudo apt install -y build-essential libncurses-dev bison flex libssl-dev libelf-dev dwarves bc kmod cpio rsync fakeroot wget git binutils-aarch64-linux-gnu
+
+    - name: Execute build script
+      run: |
+        mv ./build.sh ../
+        cd ../
+        bash ./build.sh
+
+    - name: Upload a Build Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: Upload
+        path: |
+          /home/runner/work/android_kernel_msm-5.4_nothing_sm7325/out/arch/arm64/boot/Image
+          /home/runner/work/android_kernel_msm-5.4_nothing_sm7325/boot.img
+          /home/runner/work/android_kernel_msm-5.4_nothing_sm7325/dtb
+          /home/runner/work/android_kernel_msm-5.4_nothing_sm7325/dtbo.img
+          /home/runner/work/android_kernel_msm-5.4_nothing_sm7325/vendor_boot.img
