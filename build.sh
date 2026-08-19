@@ -142,9 +142,12 @@ $CONFIG \
 # -- Kernel identity --------------------------------------------------------------
 log "Configuring kernel identity & modules..."
 cd $KERNEL_DIR
-curl -L https://raw.githubusercontent.com/maxsteeel/nomount/refs/heads/master/kernel/patches/nomount_5.4_kernel_integration.patch | patch -p1
-curl -L https://raw.githubusercontent.com/maxsteeel/nomount/refs/heads/master/kernel/src/nomount.c >fs/nomount.c
-curl -L https://raw.githubusercontent.com/maxsteeel/nomount/refs/heads/master/kernel/src/nomount.h >fs/nomount.h
+mkdir -p fs/nomount
+curl -L https://raw.githubusercontent.com/ilhan-athn7/nomount/refs/heads/experimental/hookless/kernel/patches/nomount_5.4_kernel_integration.patch | patch -p1
+curl -L https://raw.githubusercontent.com/ilhan-athn7/nomount/refs/heads/experimental/hookless/kernel/src/nomount.c >fs/nomount/nomount.c
+curl -L https://raw.githubusercontent.com/ilhan-athn7/nomount/refs/heads/experimental/hookless/kernel/src/nomount.h >fs/nomount/nomount.h
+curl -L https://raw.githubusercontent.com/ilhan-athn7/nomount/refs/heads/experimental/hookless/kernel/src/Kconfig >fs/nomount/Kconfig
+curl -L https://raw.githubusercontent.com/ilhan-athn7/nomount/refs/heads/experimental/hookless/kernel/src/Makefile >fs/nomount/Makefile
 cd $WORK_DIR
 
 $CONFIG \
