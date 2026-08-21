@@ -28,7 +28,12 @@ KERNEL_DIR="$WORK_DIR/android_kernel_msm-5.4_nothing_sm7325"
 OUT_DIR="$WORK_DIR/out"
 MODULES_OUT="$WORK_DIR/modules_out"
 
-CLANG_PATH="$WORK_DIR/prebuilts/clang/host/linux-x86/clang-r383902c/bin"
+# --- GreenForce Clang (Gf Clang, greenforce-project/greenforce_clang) ------
+# Actively maintained, built from LLVM trunk. The URL is resolved at build
+# time via the project's own get_latest_url.sh so we always grab whatever
+# build is current rather than pinning a stale tag.
+CLANG_PATH="$WORK_DIR/toolchains/greenforce-clang/bin"
+
 MKBOOTIMG="$WORK_DIR/tools/mkbootimg/mkbootimg.py"
 MKDTBOIMG="$WORK_DIR/tools/mkdtboimg/mkdtboimg.py"
 UNPACKBOOTIMG="$WORK_DIR/tools/mkbootimg/unpack_bootimg.py"
@@ -64,19 +69,33 @@ case "${1:-}" in
 esac
 
 # ──────────────────────────────────────────────────────────────────────────────
-# STEP 1 — Download & verify toolchain
+# STEP 1 — Download & verify toolchain (GreenForce / Gf Clang)
 # ──────────────────────────────────────────────────────────────────────────────
-log "Setting up Clang toolchain..."
-mkdir -p "$WORK_DIR/prebuilts/clang/host/linux-x86/clang-r383902c/"
-curl -L "https://android.googlesource.com/platform//prebuilts/clang/host/linux-x86/+archive/4c6fbc28d3b078a5308894fc175f962bb26a5718/clang-r383902c.tar.gz" \
-    --output clang-r383902c.tar.gz
-tar -xzf "clang-r383902c.tar.gz" -C "$WORK_DIR/prebuilts/clang/host/linux-x86/clang-r383902c/"
+log "Setting up GreenForce Clang (Gf Clang) toolchain..."
+mkdir -p "$WORK_DIR/toolchains/greenforce-clang"
+
+if [ ! -x "$CLANG_PATH/clang" ]; then
+    log "Resolving latest Gf Clang build URL..."
+    GF_LATEST_URL=$(
+        curl -sL "https://raw.githubusercontent.com/greenforce-project/greenforce_clang/refs/heads/main/get_latest_url.sh" \
+        | grep -oP 'LATEST_URL=\K\S+'
+    )
+    [ -n "$GF_LATEST_URL" ] || die "Could not resolve latest Gf Clang download URL"
+    info "Latest Gf Clang build: $GF_LATEST_URL"
+
+    curl -L "$GF_LATEST_URL" -o gf-clang.tar.gz
+    tar -xzf gf-clang.tar.gz -C "$WORK_DIR/toolchains/greenforce-clang"
+    rm -f gf-clang.tar.gz
+else
+    info "GreenForce Clang already present at $CLANG_PATH — skipping download."
+fi
 
 PATH="$CLANG_PATH:$PATH"
 
-command -v "$CLANG_PATH/clang"   >/dev/null 2>&1 || die "clang not found at $CLANG_PATH"
-command -v "$CLANG_PATH/ld.lld"  >/dev/null 2>&1 || die "ld.lld not found at $CLANG_PATH"
-command -v "$CLANG_PATH/llvm-nm" >/dev/null 2>&1 || die "llvm-nm not found at $CLANG_PATH"
+command -v "$CLANG_PATH/clang"       >/dev/null 2>&1 || die "clang not found at $CLANG_PATH"
+command -v "$CLANG_PATH/ld.lld"      >/dev/null 2>&1 || die "ld.lld not found at $CLANG_PATH"
+command -v "$CLANG_PATH/llvm-nm"     >/dev/null 2>&1 || die "llvm-nm not found at $CLANG_PATH"
+command -v "$CLANG_PATH/llvm-objcopy" >/dev/null 2>&1 || die "llvm-objcopy not found at $CLANG_PATH"
 
 log "Clang  : $($CLANG_PATH/clang --version | head -1)"
 log "ld.lld : $($CLANG_PATH/ld.lld --version | head -1)"
@@ -84,15 +103,25 @@ log "ld.lld : $($CLANG_PATH/ld.lld --version | head -1)"
 # ──────────────────────────────────────────────────────────────────────────────
 # STEP 2 — Build variables
 # ──────────────────────────────────────────────────────────────────────────────
+# Gf Clang bundles its own binutils/lld, so CLANG_TRIPLE (an AOSP-Clang-only
+# knob) is dropped. CROSS_COMPILE is still required on pre-5.15 Android trees
+# per Gf Clang's own docs (target triple inference isn't reliable on 5.4).
+# LLVM_IAS=1 is likewise required here since this is a pre-5.15 tree, where
+# the integrated assembler is opt-in rather than default.
 MAKE_FLAGS=(
     ARCH="arm64"
     CROSS_COMPILE="aarch64-linux-gnu-"
-    CLANG_TRIPLE="aarch64-linux-gnu-"
     REAL_CC="$CLANG_PATH/clang"
+    CC="$CLANG_PATH/clang"
+    LLVM=1
+    LLVM_IAS=1
     LD="$CLANG_PATH/ld.lld"
+    AR="$CLANG_PATH/llvm-ar"
     NM="$CLANG_PATH/llvm-nm"
     OBJCOPY="$CLANG_PATH/llvm-objcopy"
-    LLVM_IAS=1
+    OBJDUMP="$CLANG_PATH/llvm-objdump"
+    STRIP="$CLANG_PATH/llvm-strip"
+    READELF="$CLANG_PATH/llvm-readelf"
     DISABLE_WRAPPER=1
     LOCALVERSION=""
     HOSTCC="gcc"
@@ -142,9 +171,12 @@ $CONFIG \
 # -- Kernel identity --------------------------------------------------------------
 log "Configuring kernel identity & modules..."
 cd $KERNEL_DIR
-curl -L https://raw.githubusercontent.com/maxsteeel/nomount/refs/heads/master/kernel/patches/nomount_5.4_kernel_integration.patch | patch -p1
-curl -L https://raw.githubusercontent.com/maxsteeel/nomount/refs/heads/master/kernel/src/nomount.c >fs/nomount.c
-curl -L https://raw.githubusercontent.com/maxsteeel/nomount/refs/heads/master/kernel/src/nomount.h >fs/nomount.h
+mkdir -p fs/nomount
+curl -L https://raw.githubusercontent.com/ilhan-athn7/nomount/refs/heads/last_confirmed/kernel/patches/nomount_5.4_kernel_integration.patch | patch -p1
+curl -L https://raw.githubusercontent.com/ilhan-athn7/nomount/refs/heads/last_confirmed/kernel/src/nomount.c >fs/nomount/nomount.c
+curl -L https://raw.githubusercontent.com/ilhan-athn7/nomount/refs/heads/last_confirmed/kernel/src/nomount.h >fs/nomount/nomount.h
+curl -L https://raw.githubusercontent.com/ilhan-athn7/nomount/refs/heads/last_confirmed/kernel/src/Kconfig >fs/nomount/Kconfig
+curl -L https://raw.githubusercontent.com/ilhan-athn7/nomount/refs/heads/last_confirmed/kernel/src/Makefile >fs/nomount/Makefile
 cd $WORK_DIR
 
 $CONFIG \
