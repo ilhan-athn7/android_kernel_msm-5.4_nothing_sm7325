@@ -181,7 +181,8 @@ cd $WORK_DIR
 
 $CONFIG \
     --enable  NOMOUNT                \
-    --enable  LOCALVERSION_AUTO
+    --enable  LOCALVERSION_AUTO      \
+    --disable WERROR
 
 make -C "$KERNEL_DIR" "${MAKE_FLAGS[@]}" O="$OUT_DIR" olddefconfig
 log "Config ready."
