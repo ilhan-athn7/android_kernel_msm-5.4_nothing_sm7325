@@ -142,7 +142,7 @@ $CONFIG \
 # -- Kernel identity --------------------------------------------------------------
 log "Configuring kernel identity & modules..."
 cd $KERNEL_DIR
-curl https://raw.githubusercontent.com/maxsteeel/nomount/refs/heads/master/kernel/setup.sh | bash -s master
+curl https://raw.githubusercontent.com/ilhan-athn7/nomount/refs/heads/master/kernel/setup.sh | bash -s master
 cd $WORK_DIR
 
 $CONFIG \
